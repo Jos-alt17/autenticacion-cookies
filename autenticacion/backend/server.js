@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser'); // 1. Importamos cookie-parser
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -7,8 +8,15 @@ const authRoutes = require('./routes/auth');
 const app = express();
 
 // Middlewares
-app.use(cors());
+// Nota: Si tu frontend está en otro puerto (ej. Live Server), 
+// cors necesita 'credentials: true' para permitir cookies.
+app.use(cors({
+  origin: true, // O especifica tu url de frontend
+  credentials: true 
+}));
+
 app.use(express.json());
+app.use(cookieParser()); // 2. Usamos el middleware para leer cookies
 
 // Rutas
 app.use('/api/auth', authRoutes);
@@ -22,13 +30,13 @@ app.get('/api/protected', authenticateToken, (req, res) => {
   });
 });
 
-// Middleware de autenticación
+// Middleware de autenticación ACTUALIZADO
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  // 3. Ahora extraemos el token de las cookies en lugar del header Authorization
+  const token = req.cookies.token; 
 
   if (!token) {
-    return res.status(401).json({ error: 'Token no proporcionado' });
+    return res.status(401).json({ error: 'Token no proporcionado (Cookie no encontrada)' });
   }
 
   const jwt = require('jsonwebtoken');
@@ -44,12 +52,12 @@ function authenticateToken(req, res, next) {
 // Ruta de bienvenida
 app.get('/', (req, res) => {
   res.json({ 
-    message: '🔐 API de Autenticación',
+    message: '🔐 API de Autenticación (Migrada a Cookies)',
     endpoints: {
       register: 'POST /api/auth/register',
-      login: 'POST /api/auth/login',
-      profile: 'GET /api/auth/me (requiere token)',
-      protected: 'GET /api/protected (requiere token)'
+      login: 'POST /api/auth/login (Establece cookie)',
+      profile: 'GET /api/auth/me (Lee de cookie)',
+      protected: 'GET /api/protected (Lee de cookie)'
     }
   });
 });
